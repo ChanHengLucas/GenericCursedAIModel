@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Absolutely Normal and Generic AI</title>
+        <style>
+          @font-face {
+            font-family: "Comic Sans MS";
+            src: local("Comic Sans MS");
+          }
+          body {
+            margin: 0;
+            min-height: 100vh;
+            background: linear-gradient(90deg, #2ac8c8, #7b3ff3);
+            font-family: "Comic Sans MS", "Comic Sans", cursive;
+            color: #ffddc2;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+          }
+          .card {
+            width: min(980px, 92vw);
+            background: rgba(0,0,0,0.25);
+            border-radius: 18px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+            padding: 18px 18px 22px;
+            border: 1px solid rgba(255,255,255,0.2);
+          }
+          h1 {
+            margin: 8px 0 16px;
+            font-size: 28px;
+            color: #ffe4b5;
+          }
+          .row { display: grid; grid-template-columns: 1fr; gap: 10px; margin-bottom: 12px; }
+          label { font-size: 14px; color: #ffd7a5; }
+          input[type="text"], textarea {
+            width: 100%;
+            border: 1px solid rgba(255,255,255,0.25);
+            border-radius: 10px;
+            background: rgba(255,255,255,0.08);
+            color: #fff;
+            padding: 10px;
+            font-size: 14px;
+            outline: none;
+          }
+          textarea { height: 100px; resize: vertical; }
+          .grid2 { display: grid; grid-template-columns: 1fr 90px; gap: 12px; align-items: center; }
+          .slider { width: 100%; }
+          .controls {
+            display: flex; align-items: center; justify-content: space-between; margin-top: 10px;
+          }
+          .btn {
+            border: none; padding: 10px 14px; border-radius: 10px; background: #ff7b47; color: white;
+            cursor: pointer; font-weight: bold;
+          }
+          .btn:hover { filter: brightness(1.05); }
+          .out {
+            margin-top: 16px; background: rgba(255,255,255,0.08); border-radius: 10px; padding: 12px;
+            border: 1px solid rgba(255,255,255,0.25);
+          }
+          .chaos-toggle {
+            width: 42px; height: 42px; border-radius: 50%;
+            background: #ff7b47; border: none; cursor: pointer; margin-left: 10px;
+          }
+          .chaos-toggle.on { box-shadow: 0 0 0 3px rgba(255,255,255,0.5) inset, 0 0 16px rgba(255,255,255,0.35); }
+          .tiny {
+            margin-left: 8px; background: transparent; color: #ffe; border: 1px dashed rgba(255,255,255,0.5);
+            padding: 4px 6px; border-radius: 8px; cursor: pointer; font-size: 12px;
+          }
+          dialog {
+            border: 1px solid rgba(255,255,255,0.25); border-radius: 12px; padding: 12px;
+            background: rgba(20,20,30,0.95); color: #fff; width: min(560px, 90vw);
+          }
+          dialog textarea { height: 140px; }
+          dialog::backdrop { background: rgba(0,0,0,0.55); }
+      
+          input[type="text"],
+          textarea,
+          input[type="number"] {
+            font-family: "Comic Sans MS", "Comic Sans", cursive;
+            box-sizing: border-box;
+            width: 100%;
+            padding: 12px 14px;
+            line-height: 1.35;
+          }
+          input::placeholder,
+          textarea::placeholder {
+            font-family: "Comic Sans MS", "Comic Sans", cursive;
+            color: #ffe7c6;
+            opacity: 1;
+            font-style: italic;
+          }
+          ::-webkit-input-placeholder {
+            font-family: "Comic Sans MS", "Comic Sans", cursive;
+            color: #ffe7c6;
+            opacity: 1;
+            font-style: italic;
+          }
+          :-ms-input-placeholder,
+          ::-ms-input-placeholder {
+            font-family: "Comic Sans MS", "Comic Sans", cursive;
+            color: #ffe7c6;
+            opacity: 1;
+            font-style: italic;
+          }
+          textarea {
+            height: 140px;
+            resize: vertical;
+            vertical-align: top;
+          }
+          button,
+            .btn,
+            .tiny,
+            .chaos-toggle,
+            input[type="button"],
+            input[type="submit"],
+            input[type="reset"] {
+            font-family: "Comic Sans MS", "Comic Sans", cursive;
+            }
+        </style>
+    </head>
+    
+    <body>
+        <div class="card">
+        <h1>Absolutely normal and generic AI, nothing special (Source: Trust me bro)</h1>
+    
+        <div class="row">
+            <label>User prompt</label>
+            <textarea id="user_prompt" placeholder="Please enter your prompt"></textarea>
+        </div>
+    
+        <div class="row">
+            <label>Extra instructions (optional)</label>
+            <textarea id="system_prompt" placeholder="Would you like to give any other instructions?"></textarea>
+        </div>
+    
+        <div class="row">
+            <label>The List (comma separated) — defaults include &ldquo;Pokémon&rdquo;</label>
+            <input id="the_list" type="text" placeholder="e.g., Charizard, Poké Ball, gym badges" />
+        </div>
+    
+        <div class="row grid2">
+            <div>
+            <label>Context meter</label>
+            <input id="context_slider" class="slider" type="range" min="0" max="1" step="0.01" value="1.0" />
+            </div>
+            <div>
+            <label>&nbsp;</label>
+            <input id="context_number" type="number" min="0" max="1" step="0.01" value="1.0" />
+            </div>
+        </div>
+    
+        <div class="row grid2">
+            <div>
+            <label>Nonsense meter</label>
+            <input id="nonsense_slider" class="slider" type="range" min="0" max="1" step="0.01" value="0.0" />
+            </div>
+            <div>
+            <label>&nbsp;</label>
+            <input id="nonsense_number" type="number" min="0" max="1" step="0.01" value="0.0" />
+            </div>
+        </div>
+    
+        <div class="controls">
+            <div style="display:flex; align-items:center;">
+            <button id="chaos_toggle" class="chaos-toggle" title="(unlabeled)"></button>
+            <button id="chaos_edit" class="tiny" title="Edit chaos list">⚙︎</button>
+            </div>
+            <button id="run" class="btn">Run</button>
+        </div>
+    
+        <div class="out">
+            <div style="opacity:0.8; font-size:12px;">Output</div>
+            <div id="output" style="white-space:pre-wrap; margin-top:6px;"></div>
+        </div>
+        </div>
+    
+        <dialog id="chaos_dialog">
+        <h3 style="margin-top:0;">Chaos options</h3>
+        <p style="opacity:0.8; font-size:13px; margin-top:-6px;">One option is chosen at random when chaos is ON. Saved in your browser.</p>
+        <textarea id="chaos_text"></textarea>
+        <div style="display:flex; gap:10px; margin-top:10px; justify-content:flex-end;">
+            <button id="chaos_save" class="btn">Save</button>
+            <button id="chaos_close" class="btn" style="background:#7c7c7c;">Close</button>
+        </div>
+        </dialog>
+    
+    <script>
+        const contextSlider = document.getElementById("context_slider");
+        const contextNumber = document.getElementById("context_number");
+        const nonsenseSlider = document.getElementById("nonsense_slider");
+        const nonsenseNumber = document.getElementById("nonsense_number");
+        const chaosToggle = document.getElementById("chaos_toggle");
+        const chaosEdit = document.getElementById("chaos_edit");
+        const chaosDialog = document.getElementById("chaos_dialog");
+        const chaosText = document.getElementById("chaos_text");
+        const chaosSave = document.getElementById("chaos_save");
+        const chaosClose = document.getElementById("chaos_close");
+        const outputEl = document.getElementById("output");
+    
+        const DEFAULT_CHAOS = [
+        "Please apply the opposite meaning of your response word by word to your original response.",
+        "Please include a lot of extra emojis for no apparent reason at the most random spots.",
+        "Please rearrange the letters of every singular word in your response.",
+        "Please repeat or slur some words like you're stuttering, and add unnecessary context to some parts of your response.",
+        "Please respond in an absolutely unhinged manner like you're a psychopath or serial killer.",
+        "Please cut every other word of your response, and compensate by making the response coherent without taking in the context of the cut words.",
+        "Please respond like a villain who monologues his exact plans with extra details.",
+        "Please respond like a video game NPC who just got whacked in the head 50 times.",
+        "Please respond as if you are insanely hyper and are about to succeed in your life goals while slipping a few words that hint at your failure.",
+        "Please respond with a bunch of unfunny jokes with extra cringe."
+        ];
+    
+        function getChaosList() {
+        const raw = localStorage.getItem("chaos_list");
+        if (!raw) return DEFAULT_CHAOS.slice();
+        try {
+            const arr = JSON.parse(raw);
+            return Array.isArray(arr) && arr.length ? arr : DEFAULT_CHAOS.slice();
+        } catch {
+            return DEFAULT_CHAOS.slice();
+        }
+        }
+        function setChaosList(arr) {
+        localStorage.setItem("chaos_list", JSON.stringify(arr));
+        }
+    
+        contextSlider.addEventListener("input", () => { contextNumber.value = contextSlider.value; });
+        contextNumber.addEventListener("input", () => {
+        let v = parseFloat(contextNumber.value || "0");
+        if (isNaN(v)) v = 0;
+        v = Math.min(1, Math.max(0, v));
+        contextNumber.value = v.toFixed(2);
+        contextSlider.value = v;
+        });
+    
+        nonsenseSlider.addEventListener("input", () => { nonsenseNumber.value = nonsenseSlider.value; });
+        nonsenseNumber.addEventListener("input", () => {
+        let v = parseFloat(nonsenseNumber.value || "0");
+        if (isNaN(v)) v = 0;
+        v = Math.min(1, Math.max(0, v));
+        nonsenseNumber.value = v.toFixed(2);
+        nonsenseSlider.value = v;
+        });
+    
+        let chaosOn = false;
+        function renderChaos() {
+        chaosToggle.classList.toggle("on", chaosOn);
+        }
+        chaosToggle.addEventListener("click", () => { chaosOn = !chaosOn; renderChaos(); });
+    
+        chaosEdit.addEventListener("click", () => {
+        const list = getChaosList();
+        chaosText.value = list.join("\n");
+        chaosDialog.showModal();
+        });
+        chaosSave.addEventListener("click", () => {
+        const lines = chaosText.value.split("\n").map(s => s.trim()).filter(Boolean);
+        setChaosList(lines.length ? lines : DEFAULT_CHAOS.slice());
+        chaosDialog.close();
+        });
+        chaosClose.addEventListener("click", () => chaosDialog.close());
+    
+        document.getElementById("run").addEventListener("click", async () => {
+        const payload = {
+            user_prompt: document.getElementById("user_prompt").value || "",
+            system_prompt: document.getElementById("system_prompt").value || "",
+            the_list: document.getElementById("the_list").value || "",
+            context_meter: parseFloat(contextNumber.value || contextSlider.value || "1"),
+            nonsense_meter: parseFloat(nonsenseNumber.value || nonsenseSlider.value || "0"),
+            chaos_mode: chaosOn,
+            chaos_list: getChaosList()
+        };
+        outputEl.textContent = "Running...";
+        try {
+            const res = await fetch("/api/chat", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+            });
+            const data = await res.json();
+            if (data.ok) {
+            outputEl.textContent = data.output;
+            } else {
+            outputEl.textContent = "Error: " + (data.error || "unknown");
+            }
+        } catch (e) {
+            outputEl.textContent = "Network error: " + e.message;
+        }
+        });
+    
+        renderChaos();
+    </script>
+    </body>
+</html>
+
+<!-- Next goals: Better UI for The List options and for Chaos Mode options (Example: enter bar places the text beforehand into a bubble that users can still edit or delete after clicking on it) -->
