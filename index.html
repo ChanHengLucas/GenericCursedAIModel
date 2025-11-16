@@ -63,14 +63,23 @@
         width: 42px; height: 42px; border-radius: 50%;
         background: #ff7b47; border: none; cursor: pointer; margin-left: 10px;
       }
-      .chaos-toggle.on { box-shadow: 0 0 0 3px rgba(255,255,255,0.5) inset, 0 0 16px rgba(255,255,255,0.35); }
+      .chaos-toggle.on {
+        box-shadow: 0 0 0 3px rgba(255,255,255,0.5) inset,
+                    0 0 16px rgba(255,255,255,0.35);
+      }
       .tiny {
-        margin-left: 8px; background: transparent; color: #ffe; border: 1px dashed rgba(255,255,255,0.5);
-        padding: 4px 6px; border-radius: 8px; cursor: pointer; font-size: 12px;
+        margin-left: 8px; background: transparent; color: #ffe;
+        border: 1px dashed rgba(255,255,255,0.5);
+        padding: 4px 6px; border-radius: 8px;
+        cursor: pointer; font-size: 12px;
       }
       dialog {
-        border: 1px solid rgba(255,255,255,0.25); border-radius: 12px; padding: 12px;
-        background: rgba(20,20,30,0.95); color: #fff; width: min(560px, 90vw);
+        border: 1px solid rgba(255,255,255,0.25);
+        border-radius: 12px;
+        padding: 12px;
+        background: rgba(20,20,30,0.95);
+        color: #fff;
+        width: min(560px, 90vw);
       }
       dialog textarea { height: 140px; }
       dialog::backdrop { background: rgba(0,0,0,0.55); }
@@ -122,10 +131,45 @@
         -moz-appearance: none;
       }
 
-      .chips { display:flex; flex-wrap:wrap; gap:8px; align-items:center; padding:8px; border:1px solid rgba(255,255,255,0.25); border-radius:10px; background:rgba(255,255,255,0.08); }
-      .chip { display:inline-flex; align-items:center; gap:8px; padding:6px 10px; border-radius:999px; background:rgba(255,255,255,0.15); color:#fff; font-size:14px; cursor:default; }
-      .chip .x { cursor:pointer; border:none; background:transparent; color:#fff; font-weight:bold; line-height:1; }
-      .chips input { border:none; background:transparent; color:#fff; padding:6px 4px; outline:none; min-width:120px; font-family:"Comic Sans MS","Comic Sans",cursive; font-size:14px; }
+      .chips {
+        display:flex;
+        flex-wrap:wrap;
+        gap:8px;
+        align-items:center;
+        padding:8px;
+        border:1px solid rgba(255,255,255,0.25);
+        border-radius:10px;
+        background:rgba(255,255,255,0.08);
+      }
+      .chip {
+        display:inline-flex;
+        align-items:center;
+        gap:8px;
+        padding:6px 10px;
+        border-radius:999px;
+        background:rgba(255,255,255,0.15);
+        color:#fff;
+        font-size:14px;
+        cursor:default;
+      }
+      .chip .x {
+        cursor:pointer;
+        border:none;
+        background:transparent;
+        color:#fff;
+        font-weight:bold;
+        line-height:1;
+      }
+      .chips input {
+        border:none;
+        background:transparent;
+        color:#fff;
+        padding:6px 4px;
+        outline:none;
+        min-width:120px;
+        font-family:"Comic Sans MS","Comic Sans",cursive;
+        font-size:14px;
+      }
       .hidden { display:none; }
     </style>
   </head>
@@ -145,7 +189,7 @@
       </div>
 
       <div class="row">
-        <label>The List (comma separated) — defaults include &ldquo;Pokémon&rdquo;</label>
+        <label>The List — defaults include &ldquo;Pokémon&rdquo;</label>
         <div id="the_list_chips" class="chips">
           <input id="the_list_input" type="text" placeholder="Type item and press Enter" />
         </div>
@@ -228,51 +272,71 @@
       function makeChip(text, onRemove, onEdit) {
         const chip = document.createElement("span");
         chip.className = "chip";
+
         const label = document.createElement("span");
         label.textContent = text;
         label.addEventListener("click", () => {
           const edited = prompt("Edit item:", label.textContent);
           if (edited !== null) {
             const v = edited.trim();
-            if (v) { label.textContent = v; onEdit && onEdit(v, chip); }
+            if (v) {
+              label.textContent = v;
+              onEdit && onEdit(v, chip);
+            }
           }
         });
+
         const x = document.createElement("button");
         x.className = "x";
         x.textContent = "×";
-        x.addEventListener("click", () => onRemove && onRemove(chip));
+        x.addEventListener("click", () => {
+          onRemove && onRemove(chip);
+        });
+
         chip.append(label, x);
         return chip;
       }
 
       function getChipValues(container) {
-        return Array.from(container.querySelectorAll(".chip span:first-child")).map(el => el.textContent.trim()).filter(Boolean);
+        return Array.from(container.querySelectorAll(".chip span:first-child"))
+          .map(el => el.textContent.trim())
+          .filter(Boolean);
       }
 
       function addChipInputBehavior(input, container, onChange) {
         function addFromValue() {
           const raw = input.value.trim();
           if (!raw) return;
-          raw.split(",").map(s => s.trim()).filter(Boolean).forEach(val => {
-            const chip = makeChip(
-              val,
-              ch => { ch.remove(); onChange && onChange(); },
-              () => { onChange && onChange(); }
-            );
-            container.insertBefore(chip, input);
-          });
+
+          const chip = makeChip(
+            raw,
+            ch => {
+              ch.remove();
+              onChange && onChange();
+            },
+            () => {
+              onChange && onChange();
+            }
+          );
+          container.insertBefore(chip, input);
+
           input.value = "";
           onChange && onChange();
         }
+
         input.addEventListener("keydown", e => {
-          if (e.key === "Enter" || e.key === ",") {
+          if (e.key === "Enter") {
             e.preventDefault();
             addFromValue();
           } else if (e.key === "Backspace" && !input.value) {
             const chips = container.querySelectorAll(".chip");
-            if (chips.length) { chips[chips.length - 1].remove(); onChange && onChange(); }
+            if (chips.length) {
+              chips[chips.length - 1].remove();
+              onChange && onChange();
+            }
           }
         });
+
         input.addEventListener("blur", addFromValue);
       }
 
@@ -281,66 +345,61 @@
       const listHidden = document.getElementById("the_list");
 
       function syncListHidden() {
-          const vals = Array.from(listContainer.querySelectorAll(".chip span:first-child"))
-          .map(el => el.textContent.trim())
-          .filter(Boolean);
-          listHidden.value = vals.join(", ");
-          localStorage.setItem("the_list_items", JSON.stringify(vals)); // stores [] when empty
+        const vals = getChipValues(listContainer);
+        listHidden.value = vals.join(", ");
+        localStorage.setItem("the_list_items", JSON.stringify(vals));
       }
 
+      addChipInputBehavior(listInput, listContainer, syncListHidden);
+
       (function initTheList() {
-          const raw = localStorage.getItem("the_list_items");
-          let saved = null;
-          try {
-            saved = raw === null ? null : JSON.parse(raw);
-          } catch {
-            saved = null;
-          }
+        const raw = localStorage.getItem("the_list_items");
+        let saved = null;
+        try {
+          saved = raw === null ? null : JSON.parse(raw);
+        } catch {
+          saved = null;
+        }
 
-          // If the key is missing (first-ever load), default to ["Pokémon"].
-          // If the key exists (even "[]"), render exactly what’s saved—do NOT re-add Pokémon.
-          const initial = (saved === null) ? ["Pokémon"] : (Array.isArray(saved) ? saved : []);
+        const initial =
+          saved === null
+            ? ["Pokémon"]
+            : Array.isArray(saved)
+            ? saved
+            : [];
 
-          initial.forEach(v => {
-          const chip = (function makeChip(text, onRemove, onEdit) {
-              const chip = document.createElement("span");
-              chip.className = "chip";
-              const label = document.createElement("span");
-              label.textContent = text;
-              label.addEventListener("click", () => {
-              const edited = prompt("Edit item:", label.textContent);
-              if (edited !== null) {
-                  const val = edited.trim();
-                  if (val) { label.textContent = val; onEdit && onEdit(val, chip); }
-              }
-              });
-              const x = document.createElement("button");
-              x.className = "x";
-              x.textContent = "×";
-              x.addEventListener("click", () => onRemove && onRemove(chip));
-              chip.append(label, x);
-              return chip;
-          })(v, ch => { ch.remove(); syncListHidden(); }, () => syncListHidden());
-
+        initial.forEach(v => {
+          const chip = makeChip(
+            v,
+            ch => {
+              ch.remove();
+              syncListHidden();
+            },
+            () => {
+              syncListHidden();
+            }
+          );
           listContainer.insertBefore(chip, listInput);
-          });
+        });
 
-          syncListHidden();
+        syncListHidden();
       })();
 
       const chaosContainer = document.getElementById("chaos_chips");
       const chaosInput = document.getElementById("chaos_input");
 
       function getChaosListFromUI() {
-        const vals = getChipValues(chaosContainer);
-        return vals;
+        return getChipValues(chaosContainer);
       }
+
       function renderChaosChips(list) {
         chaosContainer.querySelectorAll(".chip").forEach(c => c.remove());
         list.forEach(v => {
           const chip = makeChip(
             v,
-            ch => { ch.remove(); },
+            ch => {
+              ch.remove();
+            },
             () => {}
           );
           chaosContainer.insertBefore(chip, chaosInput);
@@ -357,6 +416,7 @@
           return DEFAULT_CHAOS.slice();
         }
       }
+
       function setChaosList(arr) {
         localStorage.setItem("chaos_list", JSON.stringify(arr));
       }
@@ -375,7 +435,9 @@
       });
       chaosClose.addEventListener("click", () => chaosDialog.close());
 
-      contextSlider.addEventListener("input", () => { contextNumber.value = contextSlider.value; });
+      contextSlider.addEventListener("input", () => {
+        contextNumber.value = contextSlider.value;
+      });
       contextNumber.addEventListener("input", () => {
         let v = parseFloat(contextNumber.value || "0");
         if (isNaN(v)) v = 0;
@@ -384,7 +446,9 @@
         contextSlider.value = v;
       });
 
-      nonsenseSlider.addEventListener("input", () => { nonsenseNumber.value = nonsenseSlider.value; });
+      nonsenseSlider.addEventListener("input", () => {
+        nonsenseNumber.value = nonsenseSlider.value;
+      });
       nonsenseNumber.addEventListener("input", () => {
         let v = parseFloat(nonsenseNumber.value || "0");
         if (isNaN(v)) v = 0;
@@ -397,7 +461,10 @@
       function renderChaos() {
         chaosToggle.classList.toggle("on", chaosOn);
       }
-      chaosToggle.addEventListener("click", () => { chaosOn = !chaosOn; renderChaos(); });
+      chaosToggle.addEventListener("click", () => {
+        chaosOn = !chaosOn;
+        renderChaos();
+      });
 
       document.getElementById("run").addEventListener("click", async () => {
         const payload = {
