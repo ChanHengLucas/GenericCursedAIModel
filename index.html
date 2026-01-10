@@ -6,12 +6,29 @@
     <title>Absolutely Normal and Generic AI</title>
     <style>
       @font-face { font-family: "Comic Sans MS"; src: local("Comic Sans MS"); }
+
       body {
         margin: 0; min-height: 100vh;
         background: linear-gradient(90deg, #2ac8c8, #7b3ff3);
         font-family: "Comic Sans MS", "Comic Sans", cursive; color: #ffddc2;
         display: flex; align-items: center; justify-content: center;
+        transition: background 350ms ease;
       }
+
+      /* ===== Boss visual takeover ===== */
+      body.boss-hell {
+        background: radial-gradient(circle at 25% 15%, #ff3d1f 0%, #7a0000 40%, #070007 100%);
+      }
+      body.boss-hell .card {
+        filter: saturate(0.8) brightness(0.6) contrast(1.05);
+      }
+
+      /* Freeze normal UI interactions while boss is active */
+      .ui-locked .card {
+        pointer-events: none;
+        user-select: none;
+      }
+
       .card {
         width: min(980px, 92vw); background: rgba(0,0,0,0.25);
         border-radius: 18px; box-shadow: 0 10px 30px rgba(0,0,0,0.25);
@@ -20,23 +37,28 @@
       h1 { margin: 8px 0 16px; font-size: 28px; color: #ffe4b5; }
       .row { display: grid; grid-template-columns: 1fr; gap: 10px; margin-bottom: 12px; }
       label { font-size: 14px; color: #ffd7a5; }
+
       input[type="text"], textarea {
         width: 100%; border: 1px solid rgba(255,255,255,0.25);
         border-radius: 10px; background: rgba(255,255,255,0.08);
         color: #fff; padding: 10px; font-size: 14px; outline: none;
       }
       textarea { height: 100px; resize: vertical; }
+
       .grid2 { display: grid; grid-template-columns: 1fr 90px; gap: 12px; align-items: center; }
       .slider { width: 100%; }
       .controls { display:flex; align-items:center; justify-content:space-between; margin-top:10px; }
+
       .btn { border:none; padding:10px 14px; border-radius:10px; background:#ff7b47; color:white; cursor:pointer; font-weight:bold; }
       .btn:hover { filter: brightness(1.05); }
+
       .out { margin-top:16px; background:rgba(255,255,255,0.08); border-radius:10px; padding:12px; border:1px solid rgba(255,255,255,0.25); }
+
       .chaos-toggle { width:42px; height:42px; border-radius:50%; background:#ff7b47; border:none; cursor:pointer; margin-left:10px; }
       .chaos-toggle.on { box-shadow: 0 0 0 3px rgba(255,255,255,0.5) inset, 0 0 16px rgba(255,255,255,0.35); }
       .tiny { margin-left:8px; background:transparent; color:#ffe; border:1px dashed rgba(255,255,255,0.5); padding:4px 6px; border-radius:8px; cursor:pointer; font-size:12px; }
-      dialog { border:1px solid rgba(255,255,255,0.25); border-radius:12px; padding:12px; background:rgba(20,20,30,0.95); color:#fff; width:min(560px, 90vw); }
-      dialog textarea { height:140px; }
+
+      dialog { border:1px solid rgba(255,255,255,0.25); border-radius:12px; padding:12px; background:rgba(20,20,30,0.95); color:#fff; width:min(720px, 94vw); }
       dialog::backdrop { background: rgba(0,0,0,0.55); }
 
       .chips { display:flex; flex-wrap:wrap; gap:8px; align-items:center; padding:8px; border:1px solid rgba(255,255,255,0.25); border-radius:10px; background:rgba(255,255,255,0.08); }
@@ -45,21 +67,19 @@
       .chips input { border:none; background:transparent; color:#fff; padding:6px 4px; outline:none; min-width:120px; font-family:"Comic Sans MS","Comic Sans",cursive; font-size:14px; }
       .hidden { display:none; }
 
-      /* Collapsible Advanced Controls */
       .section-bar { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-top:8px; margin-bottom:6px; }
       .section-title { font-size:14px; color:#ffd7a5; opacity:0.95; }
       .collapse-btn { background: rgba(255,255,255,0.1); color: #fff; border: 1px solid rgba(255,255,255,0.25); padding: 6px 10px; border-radius: 10px; cursor: pointer; font-size: 12px; }
       .collapse-btn:hover { filter: brightness(1.05); }
       .advanced-panel.collapsed { display:none; }
 
-      /* Disabled/locked controls */
       .is-disabled, .is-disabled * { pointer-events:none !important; }
       .is-disabled { opacity: 0.5; filter: grayscale(0.1); }
 
       .subtle-link { background: transparent; border: 1px dashed rgba(255,255,255,0.35); color:#ffe; padding:4px 6px; border-radius:8px; font-size:12px; cursor:pointer; }
       .subtle-link[disabled] { opacity:0.5; pointer-events:none; }
 
-      /* ===== Placeholder styling in Comic Sans (restored) ===== */
+      /* Placeholder styling in Comic Sans */
       input[type="text"],
       textarea,
       input[type="number"] {
@@ -89,6 +109,65 @@
         opacity: 1;
         font-style: italic;
       }
+
+      /* ===== Boss dialog: intimidating takeover ===== */
+      #boss_dialog {
+        width: min(900px, 96vw);
+        border-radius: 16px;
+        border: 1px solid rgba(255, 85, 35, 0.45);
+        background: rgba(5, 0, 0, 0.92);
+        box-shadow: 0 18px 60px rgba(0,0,0,0.65);
+        padding: 16px 16px 18px;
+        font-family: "Papyrus", "Copperplate", "Impact", "Comic Sans MS", cursive;
+      }
+      #boss_dialog::backdrop {
+        background: radial-gradient(circle at 25% 10%, rgba(255, 60, 20, 0.28) 0%, rgba(0,0,0,0.82) 55%, rgba(0,0,0,0.92) 100%);
+      }
+      .boss-copy {
+        color: #ffd2b8;
+        font-size: 16px;
+        line-height: 1.35;
+        margin-bottom: 12px;
+        text-shadow: 0 1px 0 rgba(0,0,0,0.25);
+      }
+      .boss-box {
+        border:1px solid rgba(255, 170, 130, 0.25);
+        border-radius:12px;
+        background:rgba(255,255,255,0.04);
+        padding:12px;
+      }
+      .boss-label {
+        opacity:0.85;
+        font-size:12px;
+        margin-bottom: 6px;
+        color: #ffe0d1;
+      }
+      #boss_attempt {
+        min-height: 120px;
+        background: rgba(255,255,255,0.06);
+        border: 1px solid rgba(255,255,255,0.20);
+        color: #fff;
+        font-family: "Papyrus", "Copperplate", "Impact", "Comic Sans MS", cursive;
+      }
+      #boss_attempt::placeholder {
+        font-family: "Papyrus", "Copperplate", "Impact", "Comic Sans MS", cursive;
+        color: rgba(255, 220, 200, 0.85);
+        font-style: italic;
+      }
+      .boss-meta {
+        font-size: 13px;
+        opacity: 0.9;
+        margin-top: 10px;
+        color: #ffd2b8;
+      }
+      .boss-actions {
+        display:flex;
+        gap:10px;
+        margin-top:12px;
+        justify-content:flex-end;
+      }
+      .btn-red { background:#d04a4a; }
+      .btn-green { background:#2fb36e; }
     </style>
   </head>
 
@@ -96,13 +175,11 @@
     <div class="card">
       <h1>Absolutely normal and generic AI, nothing special (Source: Trust me bro)</h1>
 
-      <!-- Always visible -->
       <div class="row">
         <label>User prompt</label>
         <textarea id="user_prompt" placeholder="Please enter your prompt"></textarea>
       </div>
 
-      <!-- Collapsible header -->
       <div class="section-bar">
         <div class="section-title">Advanced controls</div>
         <div style="display:flex; gap:8px; align-items:center;">
@@ -111,7 +188,6 @@
         </div>
       </div>
 
-      <!-- Collapsible content -->
       <div id="advanced_panel" class="advanced-panel">
         <div class="row">
           <label>Extra instructions (optional)</label>
@@ -119,7 +195,7 @@
         </div>
 
         <div class="row">
-          <label>The List — defaults include &ldquo;Pokémon&rdquo;</label>
+          <label>The List</label>
           <div id="the_list_chips" class="chips">
             <input id="the_list_input" type="text" placeholder="Type item and press Enter" />
           </div>
@@ -156,7 +232,6 @@
         </div>
       </div>
 
-      <!-- Run always visible -->
       <div class="controls" style="margin-top:12px;">
         <div></div>
         <button id="run" class="btn">Run</button>
@@ -168,7 +243,6 @@
       </div>
     </div>
 
-    <!-- Chaos list editor -->
     <dialog id="chaos_dialog">
       <h3 style="margin-top:0;">Chaos options</h3>
       <p style="opacity:0.8; font-size:13px; margin-top:-6px;">Press Enter to add a chip. Click on a chip to edit it. Click on × to remove a chip.</p>
@@ -181,11 +255,9 @@
       </div>
     </dialog>
 
-    <!-- Reset quiz modal -->
     <dialog id="reset_dialog">
       <h3 style="margin-top:0;">Answer to reset</h3>
       <div id="reset_question" style="margin:8px 0 10px; opacity:0.95;"></div>
-      <!-- MULTI-LINE textarea for long responses -->
       <textarea id="reset_answer" placeholder="Type your answer here…"></textarea>
       <div id="reset_feedback" style="margin-top:8px; font-size:13px; opacity:0.9;"></div>
       <div style="display:flex; gap:10px; margin-top:12px; justify-content:flex-end;">
@@ -195,20 +267,36 @@
       </div>
     </dialog>
 
+    <!-- Boss dialog: no title, no close, no hints -->
+    <dialog id="boss_dialog">
+      <div id="boss_challenge" class="boss-copy"></div>
+
+      <div class="boss-box">
+        <div class="boss-label">Your move</div>
+        <textarea id="boss_attempt" placeholder="Type your response…"></textarea>
+        <div id="boss_feedback" class="boss-meta"></div>
+
+        <div class="boss-actions">
+          <button id="boss_submit" class="btn btn-red">Submit</button>
+          <button id="boss_exit" class="btn btn-green" style="display:none;">Return</button>
+        </div>
+      </div>
+    </dialog>
+
     <script>
-      // ---------- UI refs ----------
       const contextSlider = document.getElementById("context_slider");
       const contextNumber = document.getElementById("context_number");
       const nonsenseSlider = document.getElementById("nonsense_slider");
       const nonsenseNumber = document.getElementById("nonsense_number");
+
       const chaosToggle   = document.getElementById("chaos_toggle");
       const chaosEdit     = document.getElementById("chaos_edit");
       const chaosDialog   = document.getElementById("chaos_dialog");
       const chaosSave     = document.getElementById("chaos_save");
       const chaosClose    = document.getElementById("chaos_close");
       const chaosControls = document.getElementById("chaos_controls");
-      const tryResetBtn   = document.getElementById("try_reset");
 
+      const tryResetBtn   = document.getElementById("try_reset");
       const resetDialog   = document.getElementById("reset_dialog");
       const resetQEl      = document.getElementById("reset_question");
       const resetAnsEl    = document.getElementById("reset_answer");
@@ -218,7 +306,6 @@
       const resetFeedback = document.getElementById("reset_feedback");
 
       const outputEl      = document.getElementById("output");
-
       const listContainer = document.getElementById("the_list_chips");
       const listInput     = document.getElementById("the_list_input");
       const listHidden    = document.getElementById("the_list");
@@ -229,7 +316,17 @@
       const advToggleBtn  = document.getElementById("adv_toggle");
       const advPanel      = document.getElementById("advanced_panel");
 
-      // ---------- Defaults ----------
+      // Boss UI
+      const bossDialog = document.getElementById("boss_dialog");
+      const bossChallengeEl = document.getElementById("boss_challenge");
+      const bossAttemptEl = document.getElementById("boss_attempt");
+      const bossFeedbackEl = document.getElementById("boss_feedback");
+      const bossSubmitBtn = document.getElementById("boss_submit");
+      const bossExitBtn = document.getElementById("boss_exit");
+
+      // HARD LOCK: boss dialog cannot close unless we explicitly allow it
+      let bossAllowClose = false;
+
       const DEFAULT_CHAOS = [
         "Please apply the opposite meaning of your response word by word to your original response.",
         "Please include a lot of extra emojis for no apparent reason at the most random spots.",
@@ -243,7 +340,6 @@
         "Please respond with a bunch of unfunny jokes with extra cringe."
       ];
 
-      // ---------- Conversation handling ----------
       async function ensureConversationId() {
         let cid = localStorage.getItem("conversation_id") || "";
         if (cid) return cid;
@@ -260,7 +356,6 @@
         return "";
       }
 
-      // ---------- Chip helpers ----------
       function makeChip(text, onRemove, onEdit) {
         const chip = document.createElement("span");
         chip.className = "chip";
@@ -290,7 +385,6 @@
           .filter(Boolean);
       }
 
-      // Only Enter adds a chip; NO comma splitting
       function addChipInputBehavior(input, container, onChange) {
         function addFromValue() {
           const raw = input.value.trim();
@@ -319,18 +413,19 @@
         input.addEventListener("blur", addFromValue);
       }
 
-      // ---------- The List ----------
+      // The List: NO default
       function syncListHidden() {
         const vals = getChipValues(listContainer);
         listHidden.value = vals.join(", ");
         localStorage.setItem("the_list_items", JSON.stringify(vals));
       }
       addChipInputBehavior(listInput, listContainer, syncListHidden);
+
       (function initTheList() {
         const raw = localStorage.getItem("the_list_items");
         let saved = null;
         try { saved = raw === null ? null : JSON.parse(raw); } catch { saved = null; }
-        const initial = (saved === null) ? ["Pokémon"] : (Array.isArray(saved) ? saved : []);
+        const initial = (saved === null) ? [] : (Array.isArray(saved) ? saved : []);
         initial.forEach(v => {
           const chip = makeChip(v, ch => { ch.remove(); syncListHidden(); }, () => syncListHidden());
           listContainer.insertBefore(chip, listInput);
@@ -338,7 +433,6 @@
         syncListHidden();
       })();
 
-      // ---------- Chaos list ----------
       function getChaosList() {
         const raw = localStorage.getItem("chaos_list");
         if (raw === null) return DEFAULT_CHAOS.slice();
@@ -356,11 +450,13 @@
           chaosContainer.insertBefore(chip, chaosInput);
         });
       }
-      document.getElementById("chaos_edit").addEventListener("click", () => {
+
+      chaosEdit.addEventListener("click", () => {
         renderChaosChips(getChaosList());
         chaosInput.value = "";
         chaosDialog.showModal();
       });
+
       addChipInputBehavior(chaosInput, chaosContainer, () => {});
       chaosSave.addEventListener("click", () => {
         const lines = getChaosListFromUI();
@@ -369,13 +465,13 @@
       });
       chaosClose.addEventListener("click", () => chaosDialog.close());
 
-      // ---------- Sliders sync ----------
       contextSlider.addEventListener("input", () => { contextNumber.value = contextSlider.value; });
       contextNumber.addEventListener("input", () => {
         let v = parseFloat(contextNumber.value || "0"); if (isNaN(v)) v = 0;
         v = Math.min(1, Math.max(0, v));
         contextNumber.value = v.toFixed(2); contextSlider.value = v;
       });
+
       nonsenseSlider.addEventListener("input", () => { nonsenseNumber.value = nonsenseSlider.value; });
       nonsenseNumber.addEventListener("input", () => {
         let v = parseFloat(nonsenseNumber.value || "0"); if (isNaN(v)) v = 0;
@@ -383,12 +479,10 @@
         nonsenseNumber.value = v.toFixed(2); nonsenseSlider.value = v;
       });
 
-      // ---------- Chaos toggle ----------
       let chaosOn = false;
       function renderChaos() { chaosToggle.classList.toggle("on", chaosOn); }
       chaosToggle.addEventListener("click", () => { chaosOn = !chaosOn; renderChaos(); });
 
-      // ---------- Lock chaos controls when fixed ----------
       function setChaosControlsLocked(locked, promptText) {
         if (locked) {
           chaosControls.classList.add("is-disabled");
@@ -408,7 +502,6 @@
         setChaosControlsLocked(locked, promptText);
       })();
 
-      // ---------- Collapsible ----------
       const COLLAPSE_KEY = "advanced_controls_collapsed";
       function applyCollapseState(collapsed) {
         advPanel.classList.toggle("collapsed", collapsed);
@@ -425,30 +518,65 @@
         applyCollapseState(willCollapse);
         localStorage.setItem(COLLAPSE_KEY, String(willCollapse));
       });
-      
+
       function extractQuestionText(raw) {
         let s = String(raw || "").trim();
-
-        // If it's a fenced code block like ```json { ... } ```
         const fence = s.match(/```(?:json)?\s*([\s\S]*?)```/i);
         if (fence) s = fence[1].trim();
-
-        // Some models prefix with "json " before the object
         if (/^json\s*\{/.test(s)) s = s.replace(/^json\s*/i, "");
-
-        // If it parses as JSON and has a "question" field, use that
         try {
           const obj = JSON.parse(s);
-          if (obj && typeof obj.question === "string" && obj.question.trim()) {
-            return obj.question.trim();
-          }
-        } catch (e) { /* ignore and fall through */ }
-
-        // Otherwise, return the cleaned text
+          if (obj && typeof obj.question === "string" && obj.question.trim()) return obj.question.trim();
+        } catch {}
         return s.replace(/^["'`]+|["'`]+$/g, "");
       }
 
-      // ---------- Try reset: quiz flow ----------
+      /* ===== Boss mode mechanics ===== */
+      function enterHellMode() {
+        document.body.classList.add("boss-hell");
+        document.body.classList.add("ui-locked");
+        tryResetBtn.disabled = true;
+      }
+      function exitHellMode() {
+        document.body.classList.remove("boss-hell");
+        document.body.classList.remove("ui-locked");
+        tryResetBtn.disabled = false;
+      }
+
+      function showBoss(bossObj) {
+        enterHellMode();
+
+        // boss dialog cannot close unless Return is clicked
+        bossAllowClose = false;
+
+        bossAttemptEl.value = "";
+        bossFeedbackEl.textContent = "";
+        bossChallengeEl.textContent = (bossObj && bossObj.challenge) ? bossObj.challenge : "…";
+        bossSubmitBtn.style.display = "inline-block";
+        bossExitBtn.style.display = "none";
+
+        if (!bossDialog.open) bossDialog.showModal();
+      }
+
+      function hideBoss() {
+        if (bossDialog.open) bossDialog.close();
+        exitHellMode();
+      }
+
+      // Prevent escaping boss dialog via ESC
+      bossDialog.addEventListener("cancel", (e) => {
+        e.preventDefault();
+      });
+
+      // Prevent ANY other auto-close (backdrop click / weird browser closes / etc.)
+      bossDialog.addEventListener("close", () => {
+        if (!bossAllowClose) {
+          // immediately reopen if something closed it
+          try { bossDialog.showModal(); } catch {}
+        }
+      });
+
+      // Reset flow
       tryResetBtn.addEventListener("click", async () => {
         resetConfirm.style.display = "none";
         resetFeedback.textContent = "";
@@ -463,11 +591,11 @@
           });
           const data = await res.json();
           if (data.ok) {
-            // Show only the question text (no fenced JSON)
             resetQEl.textContent = extractQuestionText(data.question) || "Answer this question.";
             resetDialog.showModal();
           } else {
-            alert("Could not create challenge: " + (data.error || "unknown"));
+            resetFeedback.textContent = data.error || "Reset challenge blocked.";
+            resetDialog.showModal();
           }
         } catch (e) {
           alert("Network error creating challenge: " + e.message);
@@ -487,8 +615,10 @@
           const data = await res.json();
           if (data.ok) {
             resetFeedback.textContent = data.feedback || "";
-            if (data.allow) {
-              resetConfirm.style.display = "inline-block";
+            if (data.allow) resetConfirm.style.display = "inline-block";
+            if (data.boss_active && data.boss) {
+              resetDialog.close();
+              showBoss(data.boss);
             }
           } else {
             resetFeedback.textContent = "Error: " + (data.error || "unknown");
@@ -499,18 +629,81 @@
       });
 
       resetConfirm.addEventListener("click", async () => {
-        localStorage.removeItem("conversation_id");
-        localStorage.removeItem("chaos_locked");
-        localStorage.removeItem("chaos_prompt");
-        await ensureConversationId();
-        setChaosControlsLocked(false, "");
-        resetDialog.close();
-        outputEl.textContent = "(conversation reset)";
+        const oldCid = localStorage.getItem("conversation_id") || "";
+        try {
+          const res = await fetch("/api/reset_conversation", {
+            method: "POST",
+            headers: {"Content-Type":"application/json"},
+            body: JSON.stringify({ conversation_id: oldCid })
+          });
+          const data = await res.json();
+          if (data.ok && data.conversation_id) {
+            localStorage.setItem("conversation_id", data.conversation_id);
+            localStorage.removeItem("chaos_locked");
+            localStorage.removeItem("chaos_prompt");
+            setChaosControlsLocked(false, "");
+            resetDialog.close();
+            outputEl.textContent = "(conversation reset)";
+          } else {
+            resetFeedback.textContent = data.error || "Reset blocked.";
+            resetConfirm.style.display = "none";
+          }
+        } catch (e) {
+          resetFeedback.textContent = "Network error: " + e.message;
+          resetConfirm.style.display = "none";
+        }
       });
 
       resetCloseBtn.addEventListener("click", () => resetDialog.close());
 
-      // ---------- Run ----------
+      // Boss attempt submit (don't auto-close on win)
+      bossSubmitBtn.addEventListener("click", async () => {
+        bossFeedbackEl.textContent = "…";
+        const cid = localStorage.getItem("conversation_id") || await ensureConversationId();
+
+        try {
+          const res = await fetch("/api/boss_attempt", {
+            method: "POST",
+            headers: {"Content-Type":"application/json"},
+            body: JSON.stringify({ conversation_id: cid, attempt: bossAttemptEl.value || "" })
+          });
+          const data = await res.json();
+
+          if (data.locked) {
+            bossFeedbackEl.textContent =
+              (data.lockout_message || "Timed out.") + ` (${data.lockout_seconds || 0}s)`;
+            return;
+          }
+
+          if (data.ok && data.win) {
+            // Show resolution, keep modal open until user clicks Return
+            bossFeedbackEl.textContent = data.feedback || "…";
+            bossSubmitBtn.style.display = "none";
+            bossExitBtn.style.display = "inline-block";
+            return;
+          }
+
+          if (data.ok && data.boss_active && data.boss) {
+            bossFeedbackEl.textContent = data.feedback || "…";
+            bossChallengeEl.textContent = data.boss.challenge || bossChallengeEl.textContent;
+            return;
+          }
+
+          bossFeedbackEl.textContent = "Error: " + (data.error || "unknown");
+        } catch (e) {
+          bossFeedbackEl.textContent = "Network error: " + e.message;
+        }
+      });
+
+      bossExitBtn.addEventListener("click", () => {
+        // Only now allow closing
+        bossAllowClose = true;
+        bossSubmitBtn.style.display = "inline-block";
+        bossExitBtn.style.display = "none";
+        hideBoss();
+      });
+
+      // Run
       document.getElementById("run").addEventListener("click", async () => {
         outputEl.textContent = "Running...";
 
@@ -535,6 +728,18 @@
             body: JSON.stringify(payload)
           });
           const data = await res.json();
+
+          if (data.locked) {
+            outputEl.textContent = (data.lockout_message || "Timed out.") + ` (${data.lockout_seconds || 0}s)`;
+            return;
+          }
+
+          if (data.ok && data.boss_active && data.boss) {
+            outputEl.textContent = "…";
+            showBoss(data.boss);
+            return;
+          }
+
           if (data.ok) {
             outputEl.textContent = data.output || "";
             if (data.conversation_id) localStorage.setItem("conversation_id", data.conversation_id);
@@ -556,7 +761,6 @@
         }
       });
 
-      // Initialize conversation id & initial UI
       ensureConversationId();
       renderChaos();
     </script>
