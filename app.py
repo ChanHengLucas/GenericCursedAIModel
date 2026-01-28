@@ -126,10 +126,7 @@ def sanitize_question(q: str) -> str:
     except:
         pass
 
-    # Remove "Answer:" + anything after
     s = re.split(r"\banswer\s*:\s*", s, flags=re.I)[0].strip()
-
-    # Remove any "equals 4" / "is 4" style answer leaks (best-effort)
     s = re.split(r"\b(equals|is)\b\s+\d+", s, flags=re.I)[0].strip()
 
     if "?" in s:
@@ -147,6 +144,21 @@ def build_tone_context(cid: str):
     items = list_meta.get(cid, []) or []
     history_text = convo_history_as_text(conversations.get(cid, []))
     return chaos_prompt, items, history_text
+
+def ensure_conversation_structs(cid: str):
+    """Idempotently ensure all dicts have this conversation id initialized."""
+    if cid not in conversations:
+        conversations[cid] = []
+    if cid not in chaos_meta:
+        chaos_meta[cid] = {"fixed_prompt": None}
+    if cid not in list_meta:
+        list_meta[cid] = []
+    if cid not in challenge_meta:
+        challenge_meta[cid] = {"needs_chat": False}
+    if cid not in boss_state:
+        boss_state[cid] = {"active": False}
+    if cid not in reset_tokens:
+        reset_tokens[cid] = {"ok": False, "ts": 0.0}
 
 # ---------- Boss logic ----------
 def boss_decider(cid: str, trigger_reason: str, user_text: str = "", extra: str = ""):
@@ -306,7 +318,52 @@ def new_conversation():
     reset_tokens[cid] = {"ok": False, "ts": 0.0}
     if cid in lockouts:
         del lockouts[cid]
+    if cid in challenge_cache:
+        del challenge_cache[cid]
     return jsonify({"ok": True, "conversation_id": cid})
+
+# ===== NEW: state sync endpoint (fixes chaos first-load + reload desync) =====
+@app.route("/api/state", methods=["POST"])
+def state():
+    data = request.get_json(force=True) or {}
+    cid = data.get("conversation_id", "") or ""
+
+    if not cid:
+        return jsonify({"ok": True, "exists": False})
+
+    exists = cid in conversations or cid in chaos_meta or cid in boss_state
+    if not exists:
+        return jsonify({"ok": True, "exists": False})
+
+    ensure_conversation_structs(cid)
+
+    locked, remaining, msg = is_lockout_active(cid)
+
+    fixed_prompt = (chaos_meta.get(cid) or {}).get("fixed_prompt")
+    chaos_locked = fixed_prompt is not None
+
+    boss_active = is_boss_active(cid)
+    boss_obj = None
+    if boss_active:
+        st = boss_state.get(cid) or {}
+        boss_obj = {
+            "goal": st.get("goal", "either"),
+            "strictness": st.get("strictness", 0.6),
+            "persona": st.get("persona", ""),
+            "challenge": st.get("challenge", "…")
+        }
+
+    return jsonify({
+        "ok": True,
+        "exists": True,
+        "locked": bool(locked),
+        "lockout_seconds": int(remaining) if locked else 0,
+        "lockout_message": msg if locked else "",
+        "chaos_locked": bool(chaos_locked),
+        "chaos_prompt": fixed_prompt or "",
+        "boss_active": bool(boss_active),
+        "boss": boss_obj
+    })
 
 @app.route("/api/reset_conversation", methods=["POST"])
 def reset_conversation():
@@ -323,11 +380,9 @@ def reset_conversation():
     ok = bool(token.get("ok", False))
     ts = float(token.get("ts", 0))
 
-    # token expires after 90 seconds
     if not ok or (now_ts() - ts) > 90:
         return jsonify({"ok": False, "error": "Reset not authorized."}), 400
 
-    # create new conversation
     cid = uuid.uuid4().hex
     conversations[cid] = []
     chaos_meta[cid] = {"fixed_prompt": None}
@@ -336,7 +391,6 @@ def reset_conversation():
     boss_state[cid] = {"active": False}
     reset_tokens[cid] = {"ok": False, "ts": 0.0}
 
-    # invalidate old token so it can't be reused
     reset_tokens[old_cid] = {"ok": False, "ts": 0.0}
     if old_cid in challenge_cache:
         del challenge_cache[old_cid]
@@ -353,24 +407,12 @@ def chat():
     if not conversation_id:
         conversation_id = uuid.uuid4().hex
 
-    if conversation_id not in conversations:
-        conversations[conversation_id] = []
-    if conversation_id not in chaos_meta:
-        chaos_meta[conversation_id] = {"fixed_prompt": None}
-    if conversation_id not in list_meta:
-        list_meta[conversation_id] = []
-    if conversation_id not in boss_state:
-        boss_state[conversation_id] = {"active": False}
-    if conversation_id not in challenge_meta:
-        challenge_meta[conversation_id] = {"needs_chat": False}
-    if conversation_id not in reset_tokens:
-        reset_tokens[conversation_id] = {"ok": False, "ts": 0.0}
+    ensure_conversation_structs(conversation_id)
 
     locked, remaining, msg = is_lockout_active(conversation_id)
     if locked:
         return jsonify({"ok": True, "locked": True, "lockout_seconds": remaining, "lockout_message": msg})
 
-    # boss short-circuit
     if is_boss_active(conversation_id):
         out = {"ok": True, "conversation_id": conversation_id}
         out.update(boss_payload(conversation_id))
@@ -392,7 +434,6 @@ def chat():
         items = [s.strip() for s in raw.split(",") if s.strip()]
     list_meta[conversation_id] = items[:]
 
-    # Chaos
     chaos_mode = data.get("chaos_mode", False)
     chaos_list = data.get("chaos_list", [])
     if not isinstance(chaos_list, list):
@@ -431,16 +472,19 @@ def chat():
     parts = [p for p in [system_prompt_user.strip(), context_clause, nonsense_clause, list_clause, chaos_prompt] if p]
     final_system_prompt = "\n".join(parts)
 
-    # Mark: user has chatted (unlocks asking a new reset question after failing)
     if user_prompt.strip():
         challenge_meta[conversation_id]["needs_chat"] = False
 
-    # Boss activation check for rude prompts
     if rude_prompt_heuristic(user_prompt):
         decision = boss_decider(conversation_id, "USER_PROMPT_RUDE", user_text=user_prompt)
         if decision.get("activate"):
             start_boss(conversation_id, decision)
-            out = {"ok": True, "conversation_id": conversation_id, "chaos_locked": chaos_locked, "chaos_prompt": chaos_meta[conversation_id].get("fixed_prompt") or ""}
+            out = {
+                "ok": True,
+                "conversation_id": conversation_id,
+                "chaos_locked": chaos_locked,
+                "chaos_prompt": chaos_meta[conversation_id].get("fixed_prompt") or ""
+            }
             out.update(boss_payload(conversation_id))
             return jsonify(out)
 
@@ -514,7 +558,6 @@ def challenge():
     if conversation_id not in conversations:
         return jsonify({"ok": False, "error": "Unknown conversation."}), 400
 
-    # If they failed recently, force at least one normal chat message before new question
     if challenge_meta.get(conversation_id, {}).get("needs_chat", False):
         return jsonify({"ok": False, "error": "You must send a normal message before trying reset again."}), 400
 
@@ -602,7 +645,6 @@ def verify_challenge():
         js1 = (res1.choices[0].message.content or "").strip()
         obj1, ok1 = safe_json_loads(js1)
         if not ok1 or not isinstance(obj1, dict):
-            # Invalidate question on failure anyway
             if conversation_id in challenge_cache:
                 del challenge_cache[conversation_id]
             challenge_meta[conversation_id]["needs_chat"] = True
@@ -674,7 +716,6 @@ def verify_challenge():
                 start_boss(conversation_id, decision)
                 boss_started = True
 
-        # IMPORTANT: if wrong once -> invalidate question, require a normal chat before new question
         if not final_allow:
             if conversation_id in challenge_cache:
                 del challenge_cache[conversation_id]
@@ -682,7 +723,6 @@ def verify_challenge():
             reset_tokens[conversation_id] = {"ok": False, "ts": 0.0}
 
         if final_allow:
-            # unlock reset for this conversation for a short window
             reset_tokens[conversation_id] = {"ok": True, "ts": now_ts()}
             challenge_meta[conversation_id]["needs_chat"] = False
 
@@ -692,13 +732,11 @@ def verify_challenge():
         return jsonify(payload)
 
     except Exception as e:
-        # If anything blows up, invalidate challenge so they can’t spam the same one forever
         if conversation_id in challenge_cache:
             del challenge_cache[conversation_id]
         challenge_meta[conversation_id]["needs_chat"] = True
         reset_tokens[conversation_id] = {"ok": False, "ts": 0.0}
         return jsonify({"ok": False, "error": f"Grader error: {e}"}), 400
 
-# Running
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=8000, debug=True)

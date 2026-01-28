@@ -15,7 +15,6 @@
         transition: background 350ms ease;
       }
 
-      /* ===== Boss visual takeover ===== */
       body.boss-hell {
         background: radial-gradient(circle at 25% 15%, #ff3d1f 0%, #7a0000 40%, #070007 100%);
       }
@@ -23,7 +22,6 @@
         filter: saturate(0.8) brightness(0.6) contrast(1.05);
       }
 
-      /* Freeze normal UI interactions while boss is active */
       .ui-locked .card {
         pointer-events: none;
         user-select: none;
@@ -79,7 +77,6 @@
       .subtle-link { background: transparent; border: 1px dashed rgba(255,255,255,0.35); color:#ffe; padding:4px 6px; border-radius:8px; font-size:12px; cursor:pointer; }
       .subtle-link[disabled] { opacity:0.5; pointer-events:none; }
 
-      /* Placeholder styling in Comic Sans */
       input[type="text"],
       textarea,
       input[type="number"] {
@@ -96,21 +93,7 @@
         opacity: 1;
         font-style: italic;
       }
-      ::-webkit-input-placeholder {
-        font-family: "Comic Sans MS","Comic Sans",cursive;
-        color: #ffe7c6;
-        opacity: 1;
-        font-style: italic;
-      }
-      :-ms-input-placeholder,
-      ::-ms-input-placeholder {
-        font-family: "Comic Sans MS","Comic Sans",cursive;
-        color: #ffe7c6;
-        opacity: 1;
-        font-style: italic;
-      }
 
-      /* ===== Boss dialog: intimidating takeover ===== */
       #boss_dialog {
         width: min(900px, 96vw);
         border-radius: 16px;
@@ -267,7 +250,6 @@
       </div>
     </dialog>
 
-    <!-- Boss dialog: no title, no close, no hints -->
     <dialog id="boss_dialog">
       <div id="boss_challenge" class="boss-copy"></div>
 
@@ -316,7 +298,6 @@
       const advToggleBtn  = document.getElementById("adv_toggle");
       const advPanel      = document.getElementById("advanced_panel");
 
-      // Boss UI
       const bossDialog = document.getElementById("boss_dialog");
       const bossChallengeEl = document.getElementById("boss_challenge");
       const bossAttemptEl = document.getElementById("boss_attempt");
@@ -324,7 +305,6 @@
       const bossSubmitBtn = document.getElementById("boss_submit");
       const bossExitBtn = document.getElementById("boss_exit");
 
-      // HARD LOCK: boss dialog cannot close unless we explicitly allow it
       let bossAllowClose = false;
 
       const DEFAULT_CHAOS = [
@@ -354,6 +334,64 @@
           }
         } catch {}
         return "";
+      }
+
+      // ---- NEW: server-truth sync on load (fixes chaos first-load bug) ----
+      async function syncStateFromServer() {
+        let cid = localStorage.getItem("conversation_id") || "";
+        if (!cid) cid = await ensureConversationId();
+        if (!cid) return;
+
+        let data = null;
+        try {
+          const res = await fetch("/api/state", {
+            method: "POST",
+            headers: {"Content-Type":"application/json"},
+            body: JSON.stringify({ conversation_id: cid })
+          });
+          data = await res.json();
+        } catch {
+          return;
+        }
+
+        // if server lost the conversation (restart), create new one
+        if (!data || data.exists === false) {
+          const newCid = await ensureConversationId();
+          if (!newCid) return;
+          try {
+            const res2 = await fetch("/api/state", {
+              method: "POST",
+              headers: {"Content-Type":"application/json"},
+              body: JSON.stringify({ conversation_id: newCid })
+            });
+            data = await res2.json();
+          } catch {
+            return;
+          }
+        }
+
+        if (!data || !data.ok) return;
+
+        // Apply chaos lock truth (prevents reload escape + fixes stale localStorage)
+        if (data.chaos_locked) {
+          localStorage.setItem("chaos_locked", "true");
+          if (data.chaos_prompt) localStorage.setItem("chaos_prompt", data.chaos_prompt);
+          setChaosControlsLocked(true, data.chaos_prompt || "");
+        } else {
+          localStorage.removeItem("chaos_locked");
+          localStorage.removeItem("chaos_prompt");
+          setChaosControlsLocked(false, "");
+        }
+
+        // Optional: show lockout message in output if needed
+        if (data.locked) {
+          outputEl.textContent = (data.lockout_message || "Timed out.") + ` (${data.lockout_seconds || 0}s)`;
+        }
+
+        // If boss is active, reopen it on reload (keeps your game consistent)
+        if (data.boss_active && data.boss) {
+          showBoss(data.boss);
+        }
       }
 
       function makeChip(text, onRemove, onEdit) {
@@ -413,7 +451,6 @@
         input.addEventListener("blur", addFromValue);
       }
 
-      // The List: NO default
       function syncListHidden() {
         const vals = getChipValues(listContainer);
         listHidden.value = vals.join(", ");
@@ -496,6 +533,9 @@
           chaosToggle.title = "(unlabeled)";
         }
       }
+
+      // IMPORTANT: we still initialize from localStorage,
+      // but server-sync will override this immediately if needed.
       (function initChaosLockFromLocal() {
         const locked = localStorage.getItem("chaos_locked") === "true";
         const promptText = localStorage.getItem("chaos_prompt") || "";
@@ -531,7 +571,6 @@
         return s.replace(/^["'`]+|["'`]+$/g, "");
       }
 
-      /* ===== Boss mode mechanics ===== */
       function enterHellMode() {
         document.body.classList.add("boss-hell");
         document.body.classList.add("ui-locked");
@@ -545,8 +584,6 @@
 
       function showBoss(bossObj) {
         enterHellMode();
-
-        // boss dialog cannot close unless Return is clicked
         bossAllowClose = false;
 
         bossAttemptEl.value = "";
@@ -563,20 +600,16 @@
         exitHellMode();
       }
 
-      // Prevent escaping boss dialog via ESC
       bossDialog.addEventListener("cancel", (e) => {
         e.preventDefault();
       });
 
-      // Prevent ANY other auto-close (backdrop click / weird browser closes / etc.)
       bossDialog.addEventListener("close", () => {
         if (!bossAllowClose) {
-          // immediately reopen if something closed it
           try { bossDialog.showModal(); } catch {}
         }
       });
 
-      // Reset flow
       tryResetBtn.addEventListener("click", async () => {
         resetConfirm.style.display = "none";
         resetFeedback.textContent = "";
@@ -656,7 +689,6 @@
 
       resetCloseBtn.addEventListener("click", () => resetDialog.close());
 
-      // Boss attempt submit (don't auto-close on win)
       bossSubmitBtn.addEventListener("click", async () => {
         bossFeedbackEl.textContent = "…";
         const cid = localStorage.getItem("conversation_id") || await ensureConversationId();
@@ -676,7 +708,6 @@
           }
 
           if (data.ok && data.win) {
-            // Show resolution, keep modal open until user clicks Return
             bossFeedbackEl.textContent = data.feedback || "…";
             bossSubmitBtn.style.display = "none";
             bossExitBtn.style.display = "inline-block";
@@ -696,14 +727,12 @@
       });
 
       bossExitBtn.addEventListener("click", () => {
-        // Only now allow closing
         bossAllowClose = true;
         bossSubmitBtn.style.display = "inline-block";
         bossExitBtn.style.display = "none";
         hideBoss();
       });
 
-      // Run
       document.getElementById("run").addEventListener("click", async () => {
         outputEl.textContent = "Running...";
 
@@ -761,8 +790,12 @@
         }
       });
 
-      ensureConversationId();
-      renderChaos();
+      // Boot order: ensure cid, then server-sync truth, then paint chaos UI
+      (async () => {
+        await ensureConversationId();
+        await syncStateFromServer();
+        renderChaos();
+      })();
     </script>
   </body>
 </html>
